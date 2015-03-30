@@ -21,10 +21,12 @@ Gem::Specification.new do |s|
 
   # Gem dependencies
   s.add_runtime_dependency "logstash-core", '>= 1.4.0', '< 2.0.0'
+  s.add_runtime_dependency 'logstash-codec-plain'
   s.add_runtime_dependency 'dropbox-sdk'
   s.add_runtime_dependency 'stud', '~> 0.0.18'
 
   s.add_development_dependency 'logstash-devutils'
+  s.add_development_dependency 'ruby-debug'
   s.add_development_dependency 'simplecov'
   s.add_development_dependency 'coveralls'
 end

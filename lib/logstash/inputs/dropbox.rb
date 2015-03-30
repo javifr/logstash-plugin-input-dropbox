@@ -1,5 +1,6 @@
 # encoding: utf-8
 require "logstash/inputs/base"
+require "lib/logstash/inputs/dropbox-patch"
 require "logstash/namespace"
 # require "logstash/plugin_mixins/aws_config"
 
@@ -8,12 +9,13 @@ require "tmpdir"
 require "stud/interval"
 require "stud/temporary"
 
+require "dropbox_sdk"
+
 # Stream events from files from a S3 bucket.
 #
 # Each line from each file generates an event.
 # Files ending in `.gz` are handled as gzip'ed files.
 class LogStash::Inputs::Dropbox < LogStash::Inputs::Base
-  include LogStash::PluginMixins::AwsConfig
 
   config_name "dropbox"
 
@@ -22,7 +24,7 @@ class LogStash::Inputs::Dropbox < LogStash::Inputs::Base
   # your dropbox app credentials
   # Credentials can be specified:
   # - As an ["key","secret"] array
-  config :credentials, :validate => :array, :required => true
+  config :credentials, :validate => :array
 
   # The token of the folder you need to access
   config :token, :validate => :string, :required => true
@@ -69,8 +71,6 @@ class LogStash::Inputs::Dropbox < LogStash::Inputs::Base
 
     # @region = get_region
 
-    @logger.info("Registering dropbox input")
-
     @dropboxbucket = get_dropboxobject
 
     # @dropboxbucket = dropbox.buckets[@bucket]
@@ -90,28 +90,40 @@ class LogStash::Inputs::Dropbox < LogStash::Inputs::Base
   public
   def run(queue)
     Stud.interval(@interval) do
-      # process_files(queue)
+      process_files(queue)
       @logger.info("Big fun shit run")
     end
   end # def run
 
-=begin
+
   public
   def list_new_files
     objects = {}
 
-    folder, _ = @dropboxbucket.metadata("/#{@prefix}/")
+    folder, _ = @dropboxbucket.metadata("/")
+
+    debugger
+
+    # folder, _ = @dropboxbucket.metadata("/#{@prefix}/")
     # folder["contents"].keep_if { |file| valid?(file) }.map { |file_hash| file_hash["path"] }
 
-    folder["contents"].each do |log|
-      @logger.debug("Dropbox input: Found key", :key => log.key)
+    # Checking new files!
 
-      if sincedb.newer?(log.last_modified)
-        objects[log.key] = log.last_modified
-        @logger.debug("Dropbox input: Adding to objects[]", :key => log.key)
-      end
-    end
-    return objects.keys.sort {|a,b| objects[a] <=> objects[b]}
+    # @s3bucket.objects.with_prefix(@prefix).each do |log|
+
+    #     if sincedb.newer?(log.last_modified)
+    #       objects[log.key] = log.last_modified
+    #     end
+    # end
+    # return objects.keys.sort {|a,b| objects[a] <=> objects[b]}
+
+
+    # folder["contents"].each do |log|
+    #   puts log
+    # end
+
+    return folder["contents"]
+    # return objects.keys.sort {|a,b| objects[a] <=> objects[b]}
   end # def fetch_new_files
 
 
@@ -119,27 +131,39 @@ class LogStash::Inputs::Dropbox < LogStash::Inputs::Base
   def process_files(queue)
     objects = list_new_files
 
+    debugger
+
     objects.each do |key|
-      @logger.debug("S3 input processing", :bucket => @bucket, :key => key)
-
-      lastmod = @dropboxbucket.objects[key].last_modified
-
       process_log(queue, key)
-
-      sincedb.write(lastmod)
     end
+
+    # objects.each do |key|
+    #   @logger.debug("Dropbox input processing" )
+
+    #   debugger
+
+    #   lastmod = @dropboxbucket.objects[key].last_modified
+
+    #   process_log(queue, key)
+
+    #   sincedb.write(lastmod)
+    # end
   end # def process_files
 
 
   private
-  def process_local_log(queue, filename)
-    @logger.debug('Processing file', :filename => filename)
+  def process_local_log(queue, dropboxfile)
 
     metadata = {}
     # Currently codecs operates on bytes instead of stream.
     # So all IO stuff: decompression, reading need to be done in the actual
     # input and send as bytes to the codecs.
-    read_file(filename) do |line|
+
+    debugger
+
+    content, _ = @dropboxbucket.get_file_and_metadata(dropboxfile["path"])
+
+    read_file(content) do |line|
       @codec.decode(line) do |event|
         # We are making an assumption concerning cloudfront
         # log format, the user will use the plain or the line codec
@@ -150,20 +174,20 @@ class LogStash::Inputs::Dropbox < LogStash::Inputs::Base
         # The line need to go through the codecs to replace
         # unknown bytes in the log stream before doing a regexp match or
         # you will get a `Error: invalid byte sequence in UTF-8'
-        if event_is_metadata?(event)
-          @logger.debug('Event is metadata, updating the current cloudfront metadata', :event => event)
-          update_metadata(metadata, event)
-        else
+        # if event_is_metadata?(event)
+        #   @logger.debug('Event is metadata, updating the current cloudfront metadata', :event => event)
+        #   update_metadata(metadata, event)
+        # else
           decorate(event)
 
-          event["cloudfront_version"] = metadata[:cloudfront_version] unless metadata[:cloudfront_version].nil?
-          event["cloudfront_fields"]  = metadata[:cloudfront_fields] unless metadata[:cloudfront_fields].nil?
-
           queue << event
-        end
+        # end
       end
     end
   end # def process_local_log
+
+=begin
+
 
   private
   def event_is_metadata?(event)
@@ -194,13 +218,15 @@ class LogStash::Inputs::Dropbox < LogStash::Inputs::Base
     end
   end
 
+=end
+
   private
   def read_file(filename, &block)
-    if gzip?(filename)
-      read_gzip_file(filename, block)
-    else
+    # if gzip?(filename)
+    #   read_gzip_file(filename, block)
+    # else
       read_plain_file(filename, block)
-    end
+    # end
   end
 
   def read_plain_file(filename, block)
@@ -208,6 +234,9 @@ class LogStash::Inputs::Dropbox < LogStash::Inputs::Base
       file.each(&block)
     end
   end
+
+=begin
+
 
   private
   def sincedb
@@ -226,24 +255,26 @@ class LogStash::Inputs::Dropbox < LogStash::Inputs::Base
     File.join(ENV["HOME"], ".sincedb_" + Digest::MD5.hexdigest("#{@bucket}+#{@prefix}"))
   end
 
+=end
 
-
-  private
+  public
   def process_log(queue, key)
-    object = @dropboxbucket.objects[key]
+    object = key
+    # object = @dropboxbucket.objects[key]
 
-    filename = File.join(temporary_directory, File.basename(key))
+    # filename = File.join(temporary_directory, File.basename(key))
 
-    download_remote_file(object, filename)
+    # download_remote_file(object, filename)
 
-    process_local_log(queue, filename)
+    process_local_log(queue, object)
 
-    backup_to_bucket(object, key)
-    backup_to_dir(filename)
+    # backup_to_bucket(object, key)
+    # backup_to_dir(filename)
 
-    delete_file_from_bucket(object)
+    # delete_file_from_bucket(object)
   end
 
+=begin
   private
   def download_remote_file(remote_object, local_filename)
     @logger.debug("S3 input: Download remove file", :remote_key => remote_object.key, :local_filename => local_filename)
@@ -260,9 +291,10 @@ class LogStash::Inputs::Dropbox < LogStash::Inputs::Base
       object.delete()
     end
   end
-
+=end
   private
   def get_dropboxobject
+
     # TODO: (ph) Deprecated, it will be removed
     if @credentials.length == 2
       @access_key_id = @credentials[0]
@@ -271,37 +303,39 @@ class LogStash::Inputs::Dropbox < LogStash::Inputs::Base
       @logger.error("Credentials missing, at least one of them.")
     end
 
-    if @credentials && @tokeb
-      dropbox = DropboxClient.new(@token)
+    puts @token
+
+    if @credentials && @token
+      DropboxClient.new(@token)
     end
   end
 
-  private
+  # private
 
-  module SinceDB
-    class File
-      def initialize(file)
-        @sincedb_path = file
-      end
+  # module SinceDB
+  #   class File
+  #     def initialize(file)
+  #       @sincedb_path = file
+  #     end
 
-      def newer?(date)
-        date > read
-      end
+  #     def newer?(date)
+  #       date > read
+  #     end
 
-      def read
-        if ::File.exists?(@sincedb_path)
-          since = Time.parse(::File.read(@sincedb_path).chomp.strip)
-        else
-          since = Time.new(0)
-        end
-        return since
-      end
+  #     def read
+  #       if ::File.exists?(@sincedb_path)
+  #         since = Time.parse(::File.read(@sincedb_path).chomp.strip)
+  #       else
+  #         since = Time.new(0)
+  #       end
+  #       return since
+  #     end
 
-      def write(since = nil)
-        since = Time.now() if since.nil?
-        ::File.open(@sincedb_path, 'w') { |file| file.write(since.to_s) }
-      end
-    end
-  end
-=end
+  #     def write(since = nil)
+  #       since = Time.now() if since.nil?
+  #       ::File.open(@sincedb_path, 'w') { |file| file.write(since.to_s) }
+  #     end
+  #   end
+  # end
+
 end # class LogStash::Inputs::S3

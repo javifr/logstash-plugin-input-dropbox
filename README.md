@@ -1,3 +1,18 @@
+# Kick this thing:
+
+- rbenv install jruby-1.7.16
+- rbenv local jruby-1.7.16
+- gem install bundler
+- bundle install
+- bundle exec rspec
+
+Check ENV in console
+For some reason is taking TMPDIR for the bucket
+
+***
+
+Completely based on logstash input s3
+
 # Logstash Plugin
 
 This is a plugin for [Logstash](https://github.com/elasticsearch/logstash).
