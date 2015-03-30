@@ -48,7 +48,7 @@ describe LogStash::Inputs::Dropbox do
         objects = config.list_new_files
         objects.each do |key|
 
-          debugger
+
           config.process_log(nil, key) if !key["is_dir"]c
         end
 

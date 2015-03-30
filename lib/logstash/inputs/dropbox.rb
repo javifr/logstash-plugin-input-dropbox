@@ -102,7 +102,7 @@ class LogStash::Inputs::Dropbox < LogStash::Inputs::Base
 
     folder, _ = @dropboxbucket.metadata("/")
 
-    debugger
+
 
     # folder, _ = @dropboxbucket.metadata("/#{@prefix}/")
     # folder["contents"].keep_if { |file| valid?(file) }.map { |file_hash| file_hash["path"] }
@@ -131,7 +131,7 @@ class LogStash::Inputs::Dropbox < LogStash::Inputs::Base
   def process_files(queue)
     objects = list_new_files
 
-    debugger
+
 
     objects.each do |key|
       process_log(queue, key)
@@ -140,7 +140,7 @@ class LogStash::Inputs::Dropbox < LogStash::Inputs::Base
     # objects.each do |key|
     #   @logger.debug("Dropbox input processing" )
 
-    #   debugger
+    #
 
     #   lastmod = @dropboxbucket.objects[key].last_modified
 
@@ -159,7 +159,7 @@ class LogStash::Inputs::Dropbox < LogStash::Inputs::Base
     # So all IO stuff: decompression, reading need to be done in the actual
     # input and send as bytes to the codecs.
 
-    debugger
+
 
     content, _ = @dropboxbucket.get_file_and_metadata(dropboxfile["path"])
 
