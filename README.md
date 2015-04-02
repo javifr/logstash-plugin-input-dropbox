@@ -9,6 +9,9 @@
 Check ENV in console
 For some reason is taking TMPDIR for the bucket
 
+ojo esto:
+https://github.com/elastic/logstash/issues/2779
+El command line para plugins no va bien, toca hacer la gema y luego instalar a mano en el gemfile del logstash de turno.
 ***
 
 Completely based on logstash input s3

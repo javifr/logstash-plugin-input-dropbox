@@ -8,7 +8,7 @@ Gem::Specification.new do |s|
   s.authors         = ["Javi Fernández"]
   s.email           = 'jfernandezriverola@gmail.com'
   s.homepage        = "http://www.elasticsearch.org/guide/en/logstash/current/index.html"
-  s.require_paths = ["lib"]
+  s.require_paths   = ["lib"]
 
   # Files
   s.files = `git ls-files`.split($\)+::Dir.glob('vendor/*')
@@ -20,14 +20,15 @@ Gem::Specification.new do |s|
   s.metadata = { "logstash_plugin" => "true", "logstash_group" => "input" }
 
   # Gem dependencies
+
   s.add_runtime_dependency "logstash-core", '>= 1.4.0', '< 2.0.0'
   s.add_runtime_dependency 'logstash-codec-plain'
+  s.add_runtime_dependency 'stud'
   s.add_runtime_dependency 'dropbox-sdk'
-  s.add_runtime_dependency 'stud', '~> 0.0.18'
 
   s.add_development_dependency 'logstash-devutils'
   s.add_development_dependency 'ruby-debug'
   s.add_development_dependency 'simplecov'
   s.add_development_dependency 'coveralls'
-end
 
+end

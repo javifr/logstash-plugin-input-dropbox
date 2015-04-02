@@ -14,11 +14,13 @@ describe LogStash::Inputs::Dropbox do
   let(:day) { 3600 * 24 }
   let(:settings) {
     {
-      # "access_key_id" => "1234",
-      # "secret_access_key" => "secret",
+      "type" => "customers",
+      "tags" => ["punt fresc", "raw"],
+      "prefix" => "/loyal_guru_files/raw/customers/",
+      "backup_to_folder" => "/loyal_guru_files/raw/archived/customers/",
+      "backup_to_prefix_file" => "%{type}.%{+yyyy.MM.dd.HH}",
       "credentials" => [ "90xpj25b6k0qv3e","rrfb8l6f824olm7"],
       "token" => "36urfzNJ8pAAAAAAAAAABRnDjV981R7vPk7ZYf0cbMZDvxTJiZ5PM2Ex7P-PwPTx"
-
     }
   }
 
@@ -39,17 +41,14 @@ describe LogStash::Inputs::Dropbox do
     #   expect(config.list_new_files).to eq(objects_list.map(&:key))
     # end
 
-    it 'should support doing local backup of files' do
+    it 'should process all files in desired path' do
 
         config = LogStash::Inputs::Dropbox.new(settings)
         config.register
-        # expect(config.process_files)
 
         objects = config.list_new_files
         objects.each do |key|
-
-
-          config.process_log(nil, key) if !key["is_dir"]c
+          config.process_log([], key) if !key["is_dir"]
         end
 
     end
