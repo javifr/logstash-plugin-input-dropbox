@@ -19,11 +19,6 @@ class LogStash::Inputs::Dropbox < LogStash::Inputs::Base
 
   default :codec, "plain"
 
-  # your dropbox app credentials
-  # Credentials can be specified:
-  # - As an ["key","secret"] array
-  config :credentials, :validate => :array
-
   # The token of the folder you need to access
   config :token, :validate => :string, :required => true
 
@@ -99,17 +94,12 @@ class LogStash::Inputs::Dropbox < LogStash::Inputs::Base
   private
   def get_dropboxobject
 
-    # TODO: (ph) Deprecated, it will be removed
-    if @credentials.length == 2
-      @access_key_id = @credentials[0]
-      @secret_access_key = @credentials[1]
+    if @token
+      DropboxClient.new(@token)
     else
-      @logger.error("Credentials missing, at least one of them.")
+      @logger.error("Token missing in order to connect to Dropbox folder.")
     end
 
-    if @credentials && @token
-      DropboxClient.new(@token)
-    end
   end
 
 end # class LogStash::Inputs::Dropbox
