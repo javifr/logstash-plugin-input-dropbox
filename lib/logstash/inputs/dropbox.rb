@@ -25,6 +25,9 @@ class LogStash::Inputs::Dropbox < LogStash::Inputs::Base
   # If specified, the prefix of filenames in the bucket must match
   config :prefix, :validate => :string, :default => "/"
 
+  # Once in the prefixed folder filter based on a glob regexp
+  config :namespace, :validate => :string, :default => "*"
+
   # # Name of a Dropbox folder path to backup processed files to.
   config :backup_to_folder, :validate => :string, :required => true
 
@@ -50,7 +53,12 @@ class LogStash::Inputs::Dropbox < LogStash::Inputs::Base
   def list_new_files
     objects = {}
     folder, _ = @dropboxbucket.metadata(@prefix)
-    return folder["contents"]
+    return filter_files(folder)
+  end # def fetch_new_files
+
+  public
+  def filter_files(folder)
+    folder["contents"].keep_if {|object| File.fnmatch(@namespace, object["path"]) }
   end # def fetch_new_files
 
   public
