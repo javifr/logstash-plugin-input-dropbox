@@ -1,7 +1,7 @@
 Gem::Specification.new do |s|
 
   s.name            = 'logstash-input-dropbox'
-  s.version         = '0.0.1'
+  s.version         = '0.0.2'
   s.licenses        = ['Apache License (2.0)']
   s.summary         = "Stream events from files from a dropbox account."
   s.description     = "This gem is a logstash plugin required to be installed on top of the Logstash core pipeline using $LS_HOME/bin/plugin install gemname. This gem is not a stand-alone program"
@@ -12,6 +12,7 @@ Gem::Specification.new do |s|
 
   # Files
   s.files = `git ls-files`.split($\)+::Dir.glob('vendor/*')
+  #v2 s.files = Dir['lib/**/*','spec/**/*','vendor/**/*','*.gemspec','*.md','CONTRIBUTORS','Gemfile','LICENSE','NOTICE.TXT']
 
   # Tests
   s.test_files = s.files.grep(%r{^(test|spec|features)/})
@@ -21,14 +22,22 @@ Gem::Specification.new do |s|
 
   # Gem dependencies
 
-  s.add_runtime_dependency "logstash-core", '>= 1.4.0', '< 2.0.0'
+  #v1 s.add_runtime_dependency "logstash-core", '>= 1.4.0', '< 2.0.0'
+  s.add_runtime_dependency "logstash-core", ">= 2.0.0", "< 3.0.0"
   s.add_runtime_dependency 'logstash-codec-plain'
-  s.add_runtime_dependency 'stud', '~> 0.0.18'
+  #v1 s.add_runtime_dependency 'stud', '~> 0.0.18'
+  s.add_runtime_dependency 'stud', '>= 0.0.22'
   s.add_runtime_dependency 'dropbox-sdk'
 
-  s.add_development_dependency 'logstash-devutils'
+  #v1 s.add_development_dependency 'logstash-devutils'
+  s.add_development_dependency 'logstash-devutils', '>= 0.0.16'
   s.add_development_dependency 'ruby-debug'
   s.add_development_dependency 'simplecov'
   s.add_development_dependency 'coveralls'
 
 end
+
+
+
+
+
